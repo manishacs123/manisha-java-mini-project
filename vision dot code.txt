@@ -1,0 +1,135 @@
+//BrailleConverter.java (Interface)
+public interface BrailleConverter {
+    String convert(String text) throws InvalidBrailleException;
+}
+
+
+//InvalidBrailleException.java
+public class InvalidBrailleException extends Exception {
+    public InvalidBrailleException(String message) {
+        super(message);
+    }
+}
+
+
+//BrailleMap.java
+import java.util.HashMap;
+
+public class BrailleMap implements BrailleConverter {
+
+    protected HashMap<Character, String> brailleMap;
+
+    public BrailleMap() {
+        brailleMap = new HashMap<>();
+        loadBraille();
+    }
+
+    private void loadBraille() {
+        brailleMap.put('a', "100000");
+        brailleMap.put('b', "110000");
+        brailleMap.put('c', "100100");
+        brailleMap.put('d', "100110");
+        brailleMap.put('e', "100010");
+        brailleMap.put('f', "110100");
+        brailleMap.put('g', "110110");
+        brailleMap.put('h', "110010");
+        brailleMap.put('i', "010100");
+        brailleMap.put('j', "010110");
+
+        brailleMap.put(' ', "000000");
+    }
+
+    @Override
+    public String convert(String text) throws InvalidBrailleException {
+        StringBuilder result = new StringBuilder();
+
+        for (char c : text.toLowerCase().toCharArray()) {
+            if (!brailleMap.containsKey(c)) {
+                throw new InvalidBrailleException("Unsupported character: " + c);
+            }
+            result.append(brailleMap.get(c)).append(" ");
+        }
+        return result.toString();
+    }
+}
+
+//TextToBraille.java
+public class TextToBraille extends BrailleMap {
+
+    private static final String CAPITAL_SIGN = "000001";
+    private static final String NUMBER_SIGN = "001111";
+
+    @Override
+    public String convert(String text) throws InvalidBrailleException {
+        StringBuilder result = new StringBuilder();
+        boolean numberMode = false;
+
+        for (char c : text.toCharArray()) {
+
+            if (Character.isUpperCase(c)) {
+                result.append(CAPITAL_SIGN).append(" ");
+                c = Character.toLowerCase(c);
+            }
+
+            if (Character.isDigit(c)) {
+                if (!numberMode) {
+                    result.append(NUMBER_SIGN).append(" ");
+                    numberMode = true;
+                }
+                c = (char) ('a' + (c - '1'));
+            } else {
+                numberMode = false;
+            }
+
+            if (!brailleMap.containsKey(c)) {
+                throw new InvalidBrailleException("Unsupported character: " + c);
+            }
+
+            result.append(brailleMap.get(c)).append(" ");
+        }
+        return result.toString();
+    }
+}
+
+
+//VisionDotsFX.java (JavaFX GUI)
+import javafx.application.Application;
+import javafx.scene.Scene;
+import javafx.scene.control.*;
+import javafx.scene.layout.VBox;
+import javafx.stage.Stage;
+
+public class VisionDotsFX extends Application {
+
+    @Override
+    public void start(Stage stage) {
+        TextArea input = new TextArea();
+        input.setPromptText("Enter text here");
+
+        TextArea output = new TextArea();
+        output.setEditable(false);
+
+        Button convert = new Button("Convert");
+
+        TextToBraille converter = new TextToBraille();
+
+        convert.setOnAction(e -> {
+            try {
+                output.setText(converter.convert(input.getText()));
+            } catch (InvalidBrailleException ex) {
+                output.setText(ex.getMessage());
+            }
+        });
+
+        VBox root = new VBox(10, input, convert, output);
+        stage.setScene(new Scene(root, 400, 300));
+        stage.setTitle("Vision Dots");
+        stage.show();
+    }
+
+    public static void main(String[] args) {
+        launch();
+    }
+}
+
+
